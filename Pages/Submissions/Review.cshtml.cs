@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using YourApp.Data;
-using YourApp.Models;
-using YourApp.Services;
+using DigiDocWebApp.Data;
+using DigiDocWebApp.Models;
+using DigiDocWebApp.Services;
+using System.Text.Json;
 
-namespace YourApp.Pages.Submissions
+namespace DigiDocWebApp.Pages.Submissions
 {
     public class ReviewModel : PageModel
     {
@@ -22,6 +23,8 @@ namespace YourApp.Pages.Submissions
         public string Comment { get; set; } = string.Empty;
 
         public FormSubmission? Submission { get; set; }
+        
+        public Dictionary<string, object>? FormData { get; set; }
 
         public async Task<IActionResult> OnGetAsync(int id)
         {
@@ -32,6 +35,20 @@ namespace YourApp.Pages.Submissions
             if (Submission == null)
             {
                 return NotFound();
+            }
+
+            // Parse the form data JSON
+            if (!string.IsNullOrEmpty(Submission.DataJson))
+            {
+                try
+                {
+                    FormData = JsonSerializer.Deserialize<Dictionary<string, object>>(Submission.DataJson);
+                }
+                catch (JsonException)
+                {
+                    // If parsing fails, leave FormData as null
+                    FormData = null;
+                }
             }
 
             return Page();

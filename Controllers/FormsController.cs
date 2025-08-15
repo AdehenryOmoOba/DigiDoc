@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using YourApp.Data;
-using YourApp.Models;
-using YourApp.Services;
+using DigiDocWebApp.Data;
+using DigiDocWebApp.Models;
+using DigiDocWebApp.Services;
 using System.Collections.Generic; // Added missing import
 using System.Linq; // Added missing import
 
-namespace YourApp.Controllers
+namespace DigiDocWebApp.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -80,44 +80,60 @@ namespace YourApp.Controllers
         }
 
         [HttpPost("generate")]
-        public async Task<IActionResult> GenerateFormFromImage(IFormFile imageFile)
+        public async Task<IActionResult> GenerateFormFromFile([FromForm] IFormFile formFile, [FromForm] string formName, [FromForm] string formDescription, [FromForm] string formCategory)
         {
             try
             {
-                if (imageFile == null || imageFile.Length == 0)
+                if (formFile == null || formFile.Length == 0)
                 {
-                    return BadRequest("No image file provided");
+                    return BadRequest("No form file provided");
+                }
+
+                if (string.IsNullOrWhiteSpace(formName))
+                {
+                    return BadRequest("Form name is required");
                 }
 
                 // Validate file type
-                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
-                var fileExtension = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx" };
+                var fileExtension = Path.GetExtension(formFile.FileName).ToLowerInvariant();
                 if (!allowedExtensions.Contains(fileExtension))
                 {
-                    return BadRequest("Invalid file type. Only JPG, PNG, and GIF files are allowed.");
+                    return BadRequest("Invalid file type. Supported formats: JPG, PNG, GIF, PDF, DOC, DOCX.");
+                }
+
+                // Validate file size (10MB limit)
+                if (formFile.Length > 10 * 1024 * 1024)
+                {
+                    return BadRequest("File size must be less than 10MB");
                 }
 
                 // Read file content
                 using var memoryStream = new MemoryStream();
-                await imageFile.CopyToAsync(memoryStream);
-                var imageData = memoryStream.ToArray();
+                await formFile.CopyToAsync(memoryStream);
+                var fileData = memoryStream.ToArray();
 
                 // Generate form using AI
                 var generatedBy = User.Identity?.Name ?? "system";
-                var formTemplate = await _aiService.GenerateFormFromImageAsync(imageData, imageFile.FileName, generatedBy);
+                var formTemplate = await _aiService.GenerateFormFromImageAsync(fileData, formFile.FileName, generatedBy);
+
+                // Update form properties from user input
+                formTemplate.Name = formName;
+                formTemplate.Description = formDescription ?? "";
+                formTemplate.Category = formCategory ?? "General";
 
                 // Save to database
                 _context.FormTemplates.Add(formTemplate);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Generated form template {FormId} from image {FileName}", formTemplate.Id, imageFile.FileName);
+                _logger.LogInformation("Generated form template {FormId} from file {FileName}", formTemplate.Id, formFile.FileName);
 
                 return Ok(new { success = true, formId = formTemplate.Id, message = "Form generated successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating form from image {FileName}", imageFile?.FileName);
-                return StatusCode(500, "Error generating form from image");
+                _logger.LogError(ex, "Error generating form from file {FileName}", formFile?.FileName);
+                return StatusCode(500, "Error generating form from file");
             }
         }
 
@@ -157,8 +173,25 @@ namespace YourApp.Controllers
         {
             try
             {
-                var formId = int.Parse(formData["formId"]);
-                var currentPage = int.Parse(formData["currentPage"]);
+                _logger.LogInformation("Auto-save request received with {Count} fields", formData.Count);
+                foreach (var kvp in formData)
+                {
+                    _logger.LogInformation("Field: {Key} = {Value}", kvp.Key, string.Join(",", kvp.Value));
+                }
+                // Parse formId - take first value if multiple
+                var formIdString = formData["formId"].FirstOrDefault();
+                if (!int.TryParse(formIdString, out var formId))
+                {
+                    return BadRequest("Invalid form ID");
+                }
+
+                // Parse currentPage - take first value if multiple  
+                var currentPageString = formData["currentPage"].FirstOrDefault();
+                if (!int.TryParse(currentPageString, out var currentPage))
+                {
+                    return BadRequest("Invalid current page");
+                }
+
                 var submittedBy = User.Identity?.Name ?? "anonymous";
 
                 // Find or create submission

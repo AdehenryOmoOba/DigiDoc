@@ -3,10 +3,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using YourApp.Data;
-using YourApp.Models;
+using DigiDocWebApp.Data;
+using DigiDocWebApp.Models;
 
-namespace YourApp.Services
+namespace DigiDocWebApp.Services
 {
     public class NotificationService : INotificationService
     {
@@ -174,6 +174,118 @@ namespace YourApp.Services
             {
                 _logger.LogError(ex, "Error sending form rejected notification for submission {SubmissionId}", submission.Id);
                 throw;
+            }
+        }
+
+        public async Task<List<Notification>> GetUserNotificationsAsync(string recipientId, bool unreadOnly = false)
+        {
+            try
+            {
+                var query = _context.Notifications
+                    .Include(n => n.FormSubmission)
+                    .ThenInclude(fs => fs!.FormTemplate)
+                    .Include(n => n.FormTemplate)
+                    .Where(n => n.RecipientId == recipientId);
+
+                if (unreadOnly)
+                {
+                    query = query.Where(n => n.Status == NotificationStatus.Unread);
+                }
+
+                return await query
+                    .OrderByDescending(n => n.CreatedAt)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving notifications for user: {UserId}", recipientId);
+                throw;
+            }
+        }
+
+        public async Task SendFormAssignedForReviewNotificationAsync(FormSubmission submission, string reviewerId)
+        {
+            try
+            {
+                var title = $"Form Assignment: {submission.FormTemplate?.Name}";
+                var message = $"You have been assigned to review a form submission from {submission.SubmittedBy}. " +
+                             $"Form: {submission.FormTemplate?.Name}. Please review and take appropriate action.";
+
+                await CreateNotificationAsync(
+                    reviewerId,
+                    title,
+                    message,
+                    NotificationType.Info,
+                    submission.Id,
+                    actionUrl: $"/pages/submissions/review/{submission.Id}"
+                );
+
+                _logger.LogInformation("Form assignment notification sent to reviewer: {ReviewerId} for submission: {SubmissionId}",
+                    reviewerId, submission.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending form assignment notification for submission: {SubmissionId}", submission.Id);
+                throw;
+            }
+        }
+
+        public async Task NotifyInternalStaffOfNewSubmissionAsync(FormSubmission submission)
+        {
+            try
+            {
+                var internalReviewers = await GetInternalReviewersAsync();
+                var title = $"New Form Submission: {submission.FormTemplate?.Name}";
+                var message = $"A new form submission has been received from {submission.SubmittedBy}. " +
+                             $"Company: {submission.Company?.Name ?? "N/A"}. Form: {submission.FormTemplate?.Name}. " +
+                             "Please assign for review or take appropriate action.";
+
+                foreach (var reviewer in internalReviewers)
+                {
+                    await CreateNotificationAsync(
+                        reviewer,
+                        title,
+                        message,
+                        NotificationType.FormSubmitted,
+                        submission.Id,
+                        actionUrl: $"/pages/dashboard/review?highlight={submission.Id}"
+                    );
+                }
+
+                _logger.LogInformation("New submission notifications sent to internal staff for submission: {SubmissionId}", submission.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error notifying internal staff of new submission: {SubmissionId}", submission.Id);
+                throw;
+            }
+        }
+
+        public async Task SendProgressSavedNotificationAsync(FormSubmission submission)
+        {
+            try
+            {
+                // Only send notification if this is a significant progress milestone
+                if (submission.CurrentPage > 1 && submission.CurrentPage % 5 == 0) // Every 5th page
+                {
+                    var title = "Form Progress Saved";
+                    var message = $"Your progress on form '{submission.FormTemplate?.Name}' has been saved. " +
+                                 $"You are currently on page {submission.CurrentPage} of {submission.FormTemplate?.TotalPages}.";
+
+                    await CreateNotificationAsync(
+                        submission.SubmittedBy,
+                        title,
+                        message,
+                        NotificationType.Info,
+                        submission.Id,
+                        actionUrl: $"/pages/forms/fill/{submission.FormTemplateId}"
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending progress saved notification for submission: {SubmissionId}", submission.Id);
+                // Don't throw here as this is not critical
             }
         }
 

@@ -1,7 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace YourApp.Models
+namespace DigiDocWebApp.Models
 {
     public class FormSubmission
     {
@@ -18,6 +18,14 @@ namespace YourApp.Models
         [Required]
         public string DataJson { get; set; } = string.Empty;
         
+        // Company relationship - ADDED
+        public int? CompanyId { get; set; }
+        public Company? Company { get; set; }
+        
+        // User role for submission - ADDED
+        [StringLength(50)]
+        public string UserRole { get; set; } = "Client"; // Client, Broker, Internal
+        
         // Status tracking
         public FormStatus Status { get; set; } = FormStatus.Draft;
         public int CurrentPage { get; set; } = 1;
@@ -28,6 +36,11 @@ namespace YourApp.Models
         public DateTime? ReviewedAt { get; set; }
         public string? ReviewNotes { get; set; }
         public string? ReturnReason { get; set; }
+        
+        // Workflow tracking - ENHANCED
+        public bool IsUnderReview { get; set; } = false;
+        public string? AssignedReviewer { get; set; }
+        public int ReviewAttempts { get; set; } = 0;
         
         // Timestamps
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

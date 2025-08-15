@@ -1,7 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace YourApp.Models
+namespace DigiDocWebApp.Models
 {
     public class AuditLog
     {

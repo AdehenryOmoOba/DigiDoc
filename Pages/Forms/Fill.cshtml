@@ -1,23 +1,275 @@
-@page "{id:int}"
-@model YourApp.Pages.Forms.FillModel
+@page "{id:int}/{pageNumber:int?}"
+@model DigiDocWebApp.Pages.Forms.FillModel
 @{
     ViewData["Title"] = Model.FormTemplate?.Name ?? "Fill Form";
 }
-<h2 class="mb-3">@Model.FormTemplate?.Name</h2>
-<p class="text-muted">@Model.FormTemplate?.Description</p>
-<!-- Progress Bar -->
-<div class="progress mb-3" style="height: 30px;">
-    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width:@(Model.CurrentPage * 20)%">
-        Step @Model.CurrentPage
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="h3 mb-1">@Model.FormTemplate?.Name</h2>
+                    <p class="text-muted mb-0">@Model.FormTemplate?.Description</p>
+                </div>
+                <div class="btn-group" role="group">
+                    @if (Model.FormSubmission != null && Model.FormSubmission.Status == FormStatus.Draft)
+                    {
+                        <form method="post" style="display: inline;" asp-page-handler="Discard">
+                            <input type="hidden" name="submissionId" value="@Model.FormSubmission.Id" />
+                            <button type="submit" class="btn btn-outline-danger" 
+                                    onclick="return confirm('Are you sure you want to discard this draft? All unsaved data will be lost. This action cannot be undone.');">
+                                <i class="fas fa-trash"></i> Discard Draft
+                            </button>
+                        </form>
+                    }
+                    <a href="/forms" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Forms
+                    </a>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress mb-4" style="height: 10px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" 
+                     style="width:@(Model.CurrentPage * 100 / (Model.FormTemplate?.TotalPages ?? 1))%"
+                     aria-valuenow="@Model.CurrentPage" 
+                     aria-valuemin="0" 
+                     aria-valuemax="@(Model.FormTemplate?.TotalPages ?? 1)">
+                </div>
+            </div>
+
+            <!-- Form Content -->
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" id="formData">
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="CurrentPage" />
+                        <input type="hidden" asp-for="DataJson" />
+                        
+                        <!-- Dynamic Form Content -->
+                        <div class="form-content">
+                            @Html.Raw(Model.FormHtml)
+                        </div>
+
+                        <!-- Navigation Buttons -->
+                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                            <button type="submit" 
+                                    asp-page-handler="Previous" 
+                                    class="btn btn-outline-secondary" 
+                                    onclick="return collectFormData()"
+                                    disabled="@(Model.CurrentPage == 1)">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </button>
+                            
+                            <div class="text-center">
+                                <small class="text-muted">
+                                    Page @Model.CurrentPage of @(Model.FormTemplate?.TotalPages ?? 1)
+                                    <br><i class="fas fa-save text-success"></i> Progress is automatically saved
+                                </small>
+                            </div>
+                            
+                            @if (Model.CurrentPage < (Model.FormTemplate?.TotalPages ?? 1))
+                            {
+                                <button type="submit" asp-page-handler="Next" class="btn btn-primary" onclick="return collectFormData()">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="submit" asp-page-handler="Submit" class="btn btn-success" onclick="return collectFormData()">
+                                    <i class="fas fa-check"></i> Submit Form
+                                </button>
+                            }
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Auto-save Status -->
+            <div id="saveStatus" class="mt-3" style="display: none;">
+                <div class="alert alert-info">
+                    <i class="fas fa-sync fa-spin"></i> Saving progress...
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-<form method="post" class="mb-3">
-    <input type="hidden" asp-for="Id" />
-    <input type="hidden" asp-for="CurrentPage" />
-    <input type="hidden" asp-for="DataJson" />
-    <div class="d-flex justify-content-between">
-        <button type="submit" asp-page-handler="Previous" class="btn btn-outline-secondary" disabled="@(Model.CurrentPage == 1)">Previous</button>
-        <button type="submit" asp-page-handler="Next" class="btn btn-primary">Next</button>
-        <button type="submit" asp-page-handler="Submit" class="btn btn-success">Submit</button>
-    </div>
-</form>
+
+<!-- Auto-save JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let saveTimeout;
+    
+    // Auto-save when form data changes - only monitor inputs in form-content area
+    const formContent = document.querySelector('.form-content');
+    const formInputs = formContent.querySelectorAll('input, select, textarea');
+    
+    formInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(saveProgress, 1000); // Save after 1 second of inactivity
+        });
+    });
+    
+    // Also listen for input events on text fields for better UX
+    formInputs.forEach(input => {
+        if (input.type === 'text' || input.type === 'textarea' || input.type === 'number' || input.type === 'email' || input.type === 'tel') {
+            input.addEventListener('input', function() {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(saveProgress, 2000); // Save after 2 seconds of inactivity for typing
+            });
+        }
+    });
+    
+    function saveProgress() {
+        const saveStatus = document.getElementById('saveStatus');
+        saveStatus.style.display = 'block';
+        
+        // Collect form data
+        const formData = new FormData();
+        formData.append('formId', '@Model.Id');
+        formData.append('currentPage', '@Model.CurrentPage');
+        
+        // Collect all form inputs from form-content area only
+        const checkboxGroups = {};
+        const addedFields = new Set();
+        
+        const formContent = document.querySelector('.form-content');
+        const contentInputs = formContent.querySelectorAll('input, select, textarea');
+        
+        contentInputs.forEach(input => {
+            // Skip system fields and verification tokens
+            if (input.name === 'Id' || 
+                input.name === 'CurrentPage' || 
+                input.name === 'DataJson' ||
+                input.name === '__RequestVerificationToken' ||
+                input.name.startsWith('__') ||
+                !input.name) {
+                return;
+            }
+            
+            if (input.type === 'checkbox') {
+                // Handle checkbox groups (multiple checkboxes with same name)
+                if (!checkboxGroups[input.name]) {
+                    checkboxGroups[input.name] = [];
+                }
+                if (input.checked) {
+                    checkboxGroups[input.name].push(input.value);
+                }
+            } else if (input.type === 'radio' && input.checked) {
+                if (!addedFields.has(input.name)) {
+                    formData.append(input.name, input.value);
+                    addedFields.add(input.name);
+                }
+            } else if (input.type !== 'radio' && input.value && input.value.trim() !== '') {
+                if (!addedFields.has(input.name)) {
+                    formData.append(input.name, input.value);
+                    addedFields.add(input.name);
+                }
+            }
+        });
+        
+        // Add checkbox groups
+        for (const [name, values] of Object.entries(checkboxGroups)) {
+            if (values.length > 0) {
+                formData.append(name, JSON.stringify(values));
+            }
+        }
+        
+        // Send auto-save request
+        fetch('/api/forms/autosave', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            setTimeout(() => {
+                saveStatus.style.display = 'none';
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Auto-save failed:', error);
+            saveStatus.style.display = 'none';
+        });
+    }
+    
+    // Auto-save every 30 seconds
+    setInterval(saveProgress, 30000);
+    
+    // Save when user navigates away
+    window.addEventListener('beforeunload', function(e) {
+        saveProgress();
+    });
+    
+    // Function to collect form data and update DataJson hidden field
+    window.collectFormData = function() {
+        console.log('Collecting form data for submission...');
+        
+        const formDataDict = {};
+        const checkboxGroups = {};
+        const addedFields = new Set();
+        
+        // Get all form inputs within the form-content div (excluding navigation form elements)
+        const formContent = document.querySelector('.form-content');
+        const contentInputs = formContent.querySelectorAll('input, select, textarea');
+        
+        contentInputs.forEach(input => {
+            // Skip system fields and verification tokens
+            if (input.name === 'Id' || 
+                input.name === 'CurrentPage' || 
+                input.name === 'DataJson' ||
+                input.name === '__RequestVerificationToken' ||
+                input.name.startsWith('__')) {
+                return;
+            }
+            
+            // Skip empty names
+            if (!input.name) {
+                return;
+            }
+            
+            if (input.type === 'checkbox') {
+                // Handle checkbox groups
+                if (!checkboxGroups[input.name]) {
+                    checkboxGroups[input.name] = [];
+                }
+                if (input.checked) {
+                    checkboxGroups[input.name].push(input.value);
+                }
+            } else if (input.type === 'radio') {
+                if (input.checked && !addedFields.has(input.name)) {
+                    formDataDict[input.name] = input.value;
+                    addedFields.add(input.name);
+                }
+            } else if (input.value && input.value.trim() !== '') {
+                if (!addedFields.has(input.name)) {
+                    formDataDict[input.name] = input.value;
+                    addedFields.add(input.name);
+                }
+            }
+        });
+        
+        // Add checkbox groups as JSON arrays
+        for (const [name, values] of Object.entries(checkboxGroups)) {
+            if (values.length > 0) {
+                formDataDict[name] = JSON.stringify(values);
+            }
+        }
+        
+        // Update the hidden DataJson field
+        const dataJsonField = document.querySelector('input[name="DataJson"]');
+        if (dataJsonField) {
+            dataJsonField.value = JSON.stringify(formDataDict);
+            console.log('Updated DataJson field:', dataJsonField.value);
+            console.log('Collected fields:', Object.keys(formDataDict));
+        }
+        
+        return true; // Allow form submission to continue
+    };
+    
+
+});
+</script>

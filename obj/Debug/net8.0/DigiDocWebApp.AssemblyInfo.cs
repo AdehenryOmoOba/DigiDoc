@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DigiDocWebApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bedd0a5a45e55cebd9af8c58965a32c31eb655da")]
 [assembly: System.Reflection.AssemblyProductAttribute("DigiDocWebApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DigiDocWebApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

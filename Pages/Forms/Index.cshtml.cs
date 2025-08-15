@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using YourApp.Data;
-using YourApp.Models;
+using DigiDocWebApp.Data;
+using DigiDocWebApp.Models;
 
-namespace YourApp.Pages.Forms
+namespace DigiDocWebApp.Pages.Forms
 {
     public class IndexModel : PageModel
     {

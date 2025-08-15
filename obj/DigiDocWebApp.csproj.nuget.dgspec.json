@@ -1,31 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Adehenry\\source\\repos\\DigiDoc\\DigiDocWebApp\\DigiDocWebApp.csproj": {}
+    "\\\\storage\\IS-Storage\\VS_Dev_LocalWorkspaces\\AdefemiA\\Cursor_Projects\\DigiDoc\\DigiDocWebApp.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Adehenry\\source\\repos\\DigiDoc\\DigiDocWebApp\\DigiDocWebApp.csproj": {
+    "\\\\storage\\IS-Storage\\VS_Dev_LocalWorkspaces\\AdefemiA\\Cursor_Projects\\DigiDoc\\DigiDocWebApp.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Adehenry\\source\\repos\\DigiDoc\\DigiDocWebApp\\DigiDocWebApp.csproj",
+        "projectUniqueName": "\\\\storage\\IS-Storage\\VS_Dev_LocalWorkspaces\\AdefemiA\\Cursor_Projects\\DigiDoc\\DigiDocWebApp.csproj",
         "projectName": "DigiDocWebApp",
-        "projectPath": "C:\\Users\\Adehenry\\source\\repos\\DigiDoc\\DigiDocWebApp\\DigiDocWebApp.csproj",
-        "packagesPath": "C:\\Users\\Adehenry\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Adehenry\\source\\repos\\DigiDoc\\DigiDocWebApp\\obj\\",
+        "projectPath": "\\\\storage\\IS-Storage\\VS_Dev_LocalWorkspaces\\AdefemiA\\Cursor_Projects\\DigiDoc\\DigiDocWebApp.csproj",
+        "packagesPath": "C:\\Users\\AdefemiA\\.nuget\\packages\\",
+        "outputPath": "\\\\storage\\IS-Storage\\VS_Dev_LocalWorkspaces\\AdefemiA\\Cursor_Projects\\DigiDoc\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\Adehenry\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\AdefemiA\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -43,13 +37,16 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "9.0.300"
+        }
       },
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "DocumentFormat.OpenXml": {
+              "target": "Package",
+              "version": "[3.0.1, )"
+            },
             "Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation": {
               "target": "Package",
               "version": "[8.0.0, )"
@@ -67,6 +64,10 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[8.0.0, )"
+            },
+            "itext7": {
+              "target": "Package",
+              "version": "[8.0.2, )"
             }
           },
           "imports": [
@@ -88,7 +89,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.302/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.412/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

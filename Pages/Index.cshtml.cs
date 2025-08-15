@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace YourApp.Pages
+namespace DigiDocWebApp.Pages
 {
     public class IndexModel : PageModel
     {

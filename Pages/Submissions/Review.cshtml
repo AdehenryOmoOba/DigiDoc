@@ -1,5 +1,5 @@
 @page "{id:int}"
-@model YourApp.Pages.Submissions.ReviewModel
+@model DigiDocWebApp.Pages.Submissions.ReviewModel
 @{
     ViewData["Title"] = "Review Submission";
 }
@@ -11,20 +11,103 @@
             <h4 class="mb-0">@Model.Submission.FormTemplate.Name</h4>
         </div>
         <div class="card-body">
-            <p>Status: <span class="badge bg-info">@Model.Submission.Status</span></p>
-            <pre class="bg-light p-2 rounded">@Model.Submission.DataJson</pre>
-            <form method="post">
-                <input type="hidden" name="id" value="@Model.Submission.Id" />
-                <div class="mb-2">
-                    <label for="comment" class="form-label">Comment (optional):</label>
-                    <textarea name="Comment" class="form-control"></textarea>
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <p><strong>Status:</strong> <span class="badge bg-info">@Model.Submission.Status</span></p>
+                    <p><strong>Submitted By:</strong> @Model.Submission.SubmittedBy</p>
+                    <p><strong>Submitted At:</strong> @Model.Submission.SubmittedAt?.ToString("MMM dd, yyyy hh:mm tt")</p>
                 </div>
-                <div class="d-flex gap-2">
-                    <button type="submit" asp-page-handler="Return" class="btn btn-warning">Return</button>
-                    <button type="submit" asp-page-handler="Approve" class="btn btn-success">Approve</button>
-                    <button type="submit" asp-page-handler="Reject" class="btn btn-danger">Reject</button>
+                <div class="col-md-6">
+                    <p><strong>Form ID:</strong> @Model.Submission.Id</p>
+                    <p><strong>Total Pages:</strong> @Model.Submission.FormTemplate.TotalPages</p>
+                    @if (!string.IsNullOrEmpty(Model.Submission.ReturnReason))
+                    {
+                        <p><strong>Return Reason:</strong> <span class="text-warning">@Model.Submission.ReturnReason</span></p>
+                    }
                 </div>
-            </form>
+            </div>
+
+            <!-- Form Data Display -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-file-alt"></i> Form Data</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.FormData != null && Model.FormData.Any())
+                    {
+                        <div class="row">
+                            @foreach (var field in Model.FormData)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-group">
+                                        <label class="form-label fw-bold text-capitalize">
+                                            @field.Key.Replace("_", " ").Replace("benefit", "Benefit #").Replace("Legal", " Legal")
+                                        </label>
+                                        <div class="form-control-plaintext bg-light p-2 rounded">
+                                            @{
+                                                var value = field.Value?.ToString() ?? "";
+                                                // Check if it's a JSON array (checkbox group)
+                                                if (value.StartsWith("[") && value.EndsWith("]"))
+                                                {
+                                                    try
+                                                    {
+                                                        var options = System.Text.Json.JsonSerializer.Deserialize<string[]>(value);
+                                                        <ul class="mb-0">
+                                                            @foreach (var option in options)
+                                                            {
+                                                                <li>@option</li>
+                                                            }
+                                                        </ul>
+                                                    }
+                                                    catch
+                                                    {
+                                                        @value
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    @(string.IsNullOrEmpty(value) ? "Not provided" : value)
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No form data available</p>
+                    }
+                </div>
+            </div>
+
+            <!-- Review Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-check"></i> Review Actions</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <input type="hidden" name="id" value="@Model.Submission.Id" />
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Comment (optional):</label>
+                            <textarea name="Comment" class="form-control" rows="3" placeholder="Add your review comments here..."></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" asp-page-handler="Return" class="btn btn-warning">
+                                <i class="fas fa-undo"></i> Return
+                            </button>
+                            <button type="submit" asp-page-handler="Approve" class="btn btn-success">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                            <button type="submit" asp-page-handler="Reject" class="btn btn-danger">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 }

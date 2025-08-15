@@ -1,0 +1,457 @@
+@page
+@model DigiDocWebApp.Pages.Dashboard.ReviewModel
+@{
+    ViewData["Title"] = "Review Dashboard";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="h3 mb-0">Form Review Dashboard</h2>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" id="refreshBtn">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-status="all">All Submissions</a></li>
+                            <li><a class="dropdown-item" href="#" data-status="submitted">New Submissions</a></li>
+                            <li><a class="dropdown-item" href="#" data-status="underreview">Under Review</a></li>
+                            <li><a class="dropdown-item" href="#" data-status="returned">Returned</a></li>
+                            <li><a class="dropdown-item" href="#" data-status="approved">Approved</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Pending Review</h5>
+                                    <h3 class="mb-0" id="pendingCount">0</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-clock fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Under Review</h5>
+                                    <h3 class="mb-0" id="underReviewCount">0</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-eye fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Approved Today</h5>
+                                    <h3 class="mb-0" id="approvedCount">0</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Returned</h5>
+                                    <h3 class="mb-0" id="returnedCount">0</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-undo fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submissions Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Form Submissions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="submissionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Form Name</th>
+                                    <th>Company</th>
+                                    <th>Submitted By</th>
+                                    <th>Status</th>
+                                    <th>Submitted Date</th>
+                                    <th>Assigned Reviewer</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="submissionsTableBody">
+                                <!-- Data loaded via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Review Form Submission</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="formPreview">
+                    <!-- Form content loaded here -->
+                </div>
+                <div class="mt-3">
+                    <label for="reviewNotes" class="form-label">Review Notes</label>
+                    <textarea class="form-control" id="reviewNotes" rows="3" placeholder="Enter your review notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" id="returnBtn">Return for Correction</button>
+                <button type="button" class="btn btn-danger" id="rejectBtn">Reject</button>
+                <button type="button" class="btn btn-success" id="approveBtn">Approve</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign for Review</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="reviewerSelect" class="form-label">Select Reviewer</label>
+                    <select class="form-select" id="reviewerSelect">
+                        <option value="">Choose a reviewer...</option>
+                        <!-- Reviewers loaded via JavaScript -->
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="assignmentNotes" class="form-label">Notes (Optional)</label>
+                    <textarea class="form-control" id="assignmentNotes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="assignSubmitBtn">Assign</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentSubmissions = [];
+    let currentSubmissionId = null;
+    
+    // Load data on page load
+    loadSubmissions();
+    loadReviewers();
+    updateStatistics();
+    
+    // Refresh button
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+        loadSubmissions();
+        updateStatistics();
+    });
+    
+    // Filter dropdown
+    document.querySelectorAll('.dropdown-item[data-status]').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const status = this.dataset.status;
+            filterSubmissions(status);
+        });
+    });
+    
+    // Modal action buttons
+    document.getElementById('approveBtn').addEventListener('click', () => performAction('approve'));
+    document.getElementById('returnBtn').addEventListener('click', () => performAction('return'));
+    document.getElementById('rejectBtn').addEventListener('click', () => performAction('reject'));
+    document.getElementById('assignSubmitBtn').addEventListener('click', assignReviewer);
+    
+    async function loadSubmissions() {
+        try {
+            const response = await fetch('/api/submissions');
+            const submissions = await response.json();
+            currentSubmissions = submissions;
+            displaySubmissions(submissions);
+        } catch (error) {
+            console.error('Error loading submissions:', error);
+        }
+    }
+    
+    async function loadReviewers() {
+        try {
+            const response = await fetch('/api/users/reviewers');
+            const reviewers = await response.json();
+            const select = document.getElementById('reviewerSelect');
+            select.innerHTML = '<option value="">Choose a reviewer...</option>';
+            reviewers.forEach(reviewer => {
+                select.innerHTML += `<option value="${reviewer.username}">${reviewer.fullName}</option>`;
+            });
+        } catch (error) {
+            console.error('Error loading reviewers:', error);
+        }
+    }
+    
+    function displaySubmissions(submissions) {
+        const tbody = document.getElementById('submissionsTableBody');
+        tbody.innerHTML = '';
+        
+        submissions.forEach(submission => {
+            const row = createSubmissionRow(submission);
+            tbody.appendChild(row);
+        });
+    }
+    
+    function createSubmissionRow(submission) {
+        const row = document.createElement('tr');
+        
+        const statusBadge = getStatusBadge(submission.status);
+        const formattedDate = new Date(submission.submittedAt || submission.createdAt).toLocaleDateString();
+        const assignedReviewer = submission.assignedReviewer || 'Unassigned';
+        
+        row.innerHTML = `
+            <td>${submission.formTemplate.name}</td>
+            <td>${submission.company?.name || 'N/A'}</td>
+            <td>${submission.submittedBy}</td>
+            <td>${statusBadge}</td>
+            <td>${formattedDate}</td>
+            <td>${assignedReviewer}</td>
+            <td>
+                ${getActionButtons(submission)}
+            </td>
+        `;
+        
+        return row;
+    }
+    
+    function getStatusBadge(status) {
+        const badges = {
+            0: '<span class="badge bg-secondary">Draft</span>',
+            1: '<span class="badge bg-warning">Submitted</span>',
+            2: '<span class="badge bg-info">Under Review</span>',
+            3: '<span class="badge bg-success">Approved</span>',
+            4: '<span class="badge bg-danger">Returned</span>',
+            5: '<span class="badge bg-dark">Rejected</span>'
+        };
+        return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+    }
+    
+    function getActionButtons(submission) {
+        let buttons = `<button class="btn btn-sm btn-outline-primary me-1" onclick="viewSubmission(${submission.id})">View</button>`;
+        
+        if (submission.status === 1) { // Submitted
+            buttons += `<button class="btn btn-sm btn-warning me-1" onclick="assignForReview(${submission.id})">Assign</button>`;
+        }
+        
+        if (submission.status === 2) { // Under Review
+            buttons += `<button class="btn btn-sm btn-success me-1" onclick="reviewSubmission(${submission.id})">Review</button>`;
+        }
+        
+        return buttons;
+    }
+    
+    function filterSubmissions(status) {
+        let filtered = currentSubmissions;
+        
+        if (status !== 'all') {
+            const statusMap = {
+                'submitted': 1,
+                'underreview': 2,
+                'approved': 3,
+                'returned': 4,
+                'rejected': 5
+            };
+            filtered = currentSubmissions.filter(s => s.status === statusMap[status]);
+        }
+        
+        displaySubmissions(filtered);
+    }
+    
+    async function updateStatistics() {
+        try {
+            const [pending, underReview, approved, returned] = await Promise.all([
+                fetch('/api/workflow/submissions-by-status/1').then(r => r.json()),
+                fetch('/api/workflow/submissions-by-status/2').then(r => r.json()),
+                fetch('/api/workflow/submissions-by-status/3').then(r => r.json()),
+                fetch('/api/workflow/submissions-by-status/4').then(r => r.json())
+            ]);
+            
+            document.getElementById('pendingCount').textContent = pending.length;
+            document.getElementById('underReviewCount').textContent = underReview.length;
+            document.getElementById('approvedCount').textContent = approved.filter(s => 
+                new Date(s.approvedAt).toDateString() === new Date().toDateString()
+            ).length;
+            document.getElementById('returnedCount').textContent = returned.length;
+        } catch (error) {
+            console.error('Error updating statistics:', error);
+        }
+    }
+    
+    // Global functions for button clicks
+    window.viewSubmission = function(id) {
+        window.open(`/pages/submissions/review/${id}`, '_blank');
+    };
+    
+    window.assignForReview = function(id) {
+        currentSubmissionId = id;
+        const assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+        assignModal.show();
+    };
+    
+    window.reviewSubmission = function(id) {
+        currentSubmissionId = id;
+        loadSubmissionForReview(id);
+        const reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
+        reviewModal.show();
+    };
+    
+    async function loadSubmissionForReview(id) {
+        try {
+            const response = await fetch(`/api/submissions/${id}`);
+            const submission = await response.json();
+            
+            // Load form preview
+            const previewResponse = await fetch(`/api/forms/render/${submission.formTemplateId}?submissionId=${id}`);
+            const html = await previewResponse.text();
+            document.getElementById('formPreview').innerHTML = html;
+        } catch (error) {
+            console.error('Error loading submission for review:', error);
+        }
+    }
+    
+    async function assignReviewer() {
+        const reviewerId = document.getElementById('reviewerSelect').value;
+        const notes = document.getElementById('assignmentNotes').value;
+        
+        if (!reviewerId) {
+            alert('Please select a reviewer');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/workflow/assign-for-review/${currentSubmissionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    reviewerId: reviewerId,
+                    notes: notes
+                })
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('assignModal')).hide();
+                loadSubmissions();
+                updateStatistics();
+            } else {
+                alert('Error assigning reviewer');
+            }
+        } catch (error) {
+            console.error('Error assigning reviewer:', error);
+        }
+    }
+    
+    async function performAction(action) {
+        const notes = document.getElementById('reviewNotes').value;
+        
+        try {
+            const response = await fetch(`/api/workflow/${action}/${currentSubmissionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    notes: notes
+                })
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('reviewModal')).hide();
+                loadSubmissions();
+                updateStatistics();
+            } else {
+                alert(`Error performing ${action} action`);
+            }
+        } catch (error) {
+            console.error(`Error performing ${action}:`, error);
+        }
+    }
+});
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.badge {
+    font-size: 0.875em;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.modal-lg {
+    max-width: 800px;
+}
+
+#formPreview {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    background-color: #f8f9fa;
+}
+</style> 

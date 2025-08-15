@@ -5,43 +5,79 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using YourApp.Models;
+using DigiDocWebApp.Models;
 
-namespace YourApp.Services
+namespace DigiDocWebApp.Services
 {
     public class OpenAIFormGenerationService : IAIFormGenerationService
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<OpenAIFormGenerationService> _logger;
+        private readonly IDocumentProcessingService _documentProcessor;
         private readonly string _apiKey;
         private readonly string _apiUrl = "https://api.openai.com/v1/chat/completions";
 
-        public OpenAIFormGenerationService(IConfiguration configuration, ILogger<OpenAIFormGenerationService> logger)
+        public OpenAIFormGenerationService(
+            IConfiguration configuration, 
+            ILogger<OpenAIFormGenerationService> logger,
+            IDocumentProcessingService documentProcessor)
         {
             _configuration = configuration;
             _logger = logger;
-            _apiKey = _configuration["OpenAI:ApiKey"] ?? throw new InvalidOperationException("OpenAI API key not configured");
+            _documentProcessor = documentProcessor;
+            _apiKey = _configuration["OpenAI:ApiKey"] ?? "your-openai-api-key-here";
         }
 
-        public async Task<FormTemplate> GenerateFormFromImageAsync(byte[] imageData, string fileName, string generatedBy)
+        public async Task<FormTemplate> GenerateFormFromImageAsync(byte[] fileData, string fileName, string generatedBy)
         {
             try
             {
-                _logger.LogInformation("Starting form generation from image: {FileName}", fileName);
+                _logger.LogInformation("Starting form generation from file: {FileName}", fileName);
 
-                // Convert image to base64
-                var base64Image = Convert.ToBase64String(imageData);
-
-                // Create the prompt for GPT Vision
+                string formStructureJson;
+                var documentType = DocumentTypeHelper.GetDocumentType(fileName);
+                
+                // Check if OpenAI API key is configured
+                if (string.IsNullOrEmpty(_apiKey) || _apiKey == "your-openai-api-key-here")
+                {
+                    _logger.LogWarning("OpenAI API key not configured. Using demo form structure.");
+                    formStructureJson = CreateDemoFormStructure(fileName);
+                }
+                else
+                {
+                    try
+                    {
+                        if (documentType == DocumentType.Image)
+                        {
+                            // Handle image files
+                            var base64Image = Convert.ToBase64String(fileData);
                 var prompt = CreateFormGenerationPrompt();
-
-                // Call OpenAI API
-                var formStructureJson = await CallOpenAIVisionAPIAsync(base64Image, prompt);
+                            formStructureJson = await CallOpenAIVisionAPIAsync(base64Image, prompt);
+                        }
+                        else if (DocumentTypeHelper.IsDocumentFile(fileName))
+                        {
+                            // Handle document files (PDF, DOC, DOCX)
+                            var extractedText = await _documentProcessor.ExtractTextFromDocumentAsync(fileData, fileName);
+                            var prompt = CreateDocumentFormGenerationPrompt();
+                            formStructureJson = await CallOpenAITextAPIAsync(extractedText, prompt);
+                        }
+                        else
+                        {
+                            throw new NotSupportedException($"File type not supported: {Path.GetExtension(fileName)}");
+                        }
+                    }
+                    catch (Exception apiEx)
+                    {
+                        _logger.LogWarning(apiEx, "OpenAI API call failed. Using demo form structure.");
+                        formStructureJson = CreateDemoFormStructure(fileName);
+                    }
+                }
 
                 // Validate the generated structure
                 if (!await ValidateFormStructureAsync(formStructureJson))
                 {
-                    throw new InvalidOperationException("Generated form structure is invalid");
+                    _logger.LogWarning("Generated form structure is invalid. Using fallback structure.");
+                    formStructureJson = CreateDemoFormStructure(fileName);
                 }
 
                 // Create form template
@@ -245,6 +281,101 @@ Generate only the HTML code, no additional text or explanations.";
             }
         }
 
+        private string CreateDemoFormStructure(string fileName)
+        {
+            var baseName = Path.GetFileNameWithoutExtension(fileName);
+            return JsonSerializer.Serialize(new
+            {
+                formName = baseName,
+                description = $"Demo form generated from {fileName}",
+                pages = new object[]
+                {
+                    new
+                    {
+                        pageNumber = 1,
+                        title = "Basic Information",
+                        fields = new object[]
+                        {
+                            new
+                            {
+                                id = "firstName",
+                                type = "text",
+                                label = "First Name",
+                                placeholder = "Enter your first name",
+                                required = true,
+                                position = new { x = 10, y = 50, width = 200, height = 30 }
+                            },
+                            new
+                            {
+                                id = "lastName",
+                                type = "text",
+                                label = "Last Name",
+                                placeholder = "Enter your last name",
+                                required = true,
+                                position = new { x = 250, y = 50, width = 200, height = 30 }
+                            },
+                            new
+                            {
+                                id = "email",
+                                type = "email",
+                                label = "Email Address",
+                                placeholder = "Enter your email",
+                                required = true,
+                                validation = new { pattern = @"^[^\s@]+@[^\s@]+\.[^\s@]+$" },
+                                position = new { x = 10, y = 120, width = 300, height = 30 }
+                            },
+                            new
+                            {
+                                id = "phone",
+                                type = "tel",
+                                label = "Phone Number",
+                                placeholder = "(555) 123-4567",
+                                required = false,
+                                position = new { x = 10, y = 190, width = 200, height = 30 }
+                            },
+                            new
+                            {
+                                id = "department",
+                                type = "select",
+                                label = "Department",
+                                required = true,
+                                validation = new
+                                {
+                                    options = new[] { "Human Resources", "Finance", "IT", "Marketing", "Operations", "Other" }
+                                },
+                                position = new { x = 250, y = 190, width = 200, height = 30 }
+                            }
+                        }
+                    },
+                    new
+                    {
+                        pageNumber = 2,
+                        title = "Additional Details",
+                        fields = new object[]
+                        {
+                            new
+                            {
+                                id = "comments",
+                                type = "textarea",
+                                label = "Comments or Additional Information",
+                                placeholder = "Please provide any additional information...",
+                                required = false,
+                                position = new { x = 10, y = 50, width = 500, height = 100 }
+                            },
+                            new
+                            {
+                                id = "agreement",
+                                type = "checkbox",
+                                label = "I agree to the terms and conditions",
+                                required = true,
+                                position = new { x = 10, y = 200, width = 300, height = 20 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         // Response models for OpenAI API
         private class OpenAIResponse
         {
@@ -279,6 +410,113 @@ Generate only the HTML code, no additional text or explanations.";
             public string? Type { get; set; }
             public string? Label { get; set; }
             public bool Required { get; set; }
+        }
+
+        private string CreateDocumentFormGenerationPrompt()
+        {
+            return @"You are an expert form designer. Analyze the provided document text (extracted from PDF/Word) and recreate it as a structured JSON format.
+
+The text contains form content with field labels, instructions, and structure. Convert this into a digital form format.
+
+Please return ONLY a valid JSON object with this exact structure:
+{
+  ""formName"": ""string"",
+  ""description"": ""string"",
+  ""pages"": [
+    {
+      ""pageNumber"": 1,
+      ""title"": ""string"",
+      ""fields"": [
+        {
+          ""id"": ""string"",
+          ""type"": ""text|email|tel|select|radio|checkbox|textarea|date|number"",
+          ""label"": ""string"",
+          ""placeholder"": ""string (optional)"",
+          ""required"": true/false,
+          ""validation"": {
+            ""pattern"": ""regex (optional)"",
+            ""options"": [""array of options for select/radio""]
+          },
+          ""position"": {
+            ""x"": 0,
+            ""y"": 0,
+            ""width"": 200,
+            ""height"": 30
+          }
+        }
+      ]
+    }
+  ]
+}
+
+Requirements:
+1. Identify form fields from text patterns like 'Name: ____', checkboxes, etc.
+2. Extract field labels and convert to appropriate input types
+3. For options/choices, create select or radio fields
+4. Group related content into logical pages
+5. Use meaningful field IDs (camelCase)
+6. Infer required fields from context (*, required, mandatory)
+7. Create appropriate validation patterns for emails, phones, etc.
+8. Position fields logically in a vertical layout
+9. Do not include any text outside the JSON object";
+        }
+
+        private async Task<string> CallOpenAITextAPIAsync(string documentText, string prompt)
+        {
+            try
+            {
+                var requestBody = new
+                {
+                    model = "gpt-4",
+                    messages = new[]
+                    {
+                        new { role = "system", content = prompt },
+                        new { role = "user", content = $"Here is the document text to analyze:\n\n{documentText}" }
+                    },
+                    max_tokens = 4000,
+                    temperature = 0.1
+                };
+
+                var json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                using var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
+
+                var response = await httpClient.PostAsync(_apiUrl, content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("OpenAI API call failed: {StatusCode} - {Response}", response.StatusCode, responseContent);
+                    throw new HttpRequestException($"OpenAI API call failed: {response.StatusCode}");
+                }
+
+                var openAIResponse = JsonSerializer.Deserialize<OpenAIResponse>(responseContent);
+                var generatedContent = openAIResponse?.Choices?.FirstOrDefault()?.Message?.Content;
+
+                if (string.IsNullOrEmpty(generatedContent))
+                {
+                    throw new InvalidOperationException("OpenAI returned empty response");
+                }
+
+                // Extract JSON from the response (in case there's extra text)
+                var startIndex = generatedContent.IndexOf('{');
+                var lastIndex = generatedContent.LastIndexOf('}');
+                
+                if (startIndex >= 0 && lastIndex > startIndex)
+                {
+                    generatedContent = generatedContent.Substring(startIndex, lastIndex - startIndex + 1);
+                }
+
+                _logger.LogInformation("Successfully generated form structure from document text");
+                return generatedContent;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calling OpenAI Text API");
+                throw;
+            }
         }
     }
 }

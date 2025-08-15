@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace YourApp.Models
+namespace DigiDocWebApp.Models
 {
     public class Company
     {
