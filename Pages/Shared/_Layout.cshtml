@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - DigiDoc</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-file-alt me-2"></i>
+                DigiDoc
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-home me-1"></i>Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/forms">
+                            <i class="fas fa-list me-1"></i>Forms
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/submissions">
+                            <i class="fas fa-inbox me-1"></i>Submissions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="fas fa-chart-bar me-1"></i>Dashboard
+                        </a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-bell me-1"></i>
+                            <span class="badge bg-danger" id="notificationCount" style="display: none;">0</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" id="notificationsList">
+                            <li><h6 class="dropdown-header">Notifications</h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-center" href="#" id="noNotifications">No new notifications</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i>User
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/profile"><i class="fas fa-user-cog me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="/settings"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <main role="main" class="pb-3">
+        <div class="container mt-4">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            
+            @if (TempData["Warning"] != null)
+            {
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Warning"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            
+            @if (TempData["Info"] != null)
+            {
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>@TempData["Info"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <p>&copy; 2024 DigiDoc - Digital Form Management System</p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <p>Powered by AI-Powered Form Generation</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Custom JS -->
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <script>
+        // Load notifications on page load
+        $(document).ready(function() {
+            loadNotifications();
+            
+            // Refresh notifications every 30 seconds
+            setInterval(loadNotifications, 30000);
+        });
+        
+        function loadNotifications() {
+            $.get('/api/notifications/unread', function(data) {
+                updateNotificationBadge(data.count);
+                updateNotificationList(data.notifications);
+            }).fail(function() {
+                console.log('Failed to load notifications');
+            });
+        }
+        
+        function updateNotificationBadge(count) {
+            const badge = $('#notificationCount');
+            if (count > 0) {
+                badge.text(count).show();
+            } else {
+                badge.hide();
+            }
+        }
+        
+        function updateNotificationList(notifications) {
+            const list = $('#notificationsList');
+            const noNotifications = $('#noNotifications');
+            
+            // Remove existing notification items
+            list.find('.notification-item').remove();
+            
+            if (notifications && notifications.length > 0) {
+                noNotifications.hide();
+                notifications.forEach(function(notification) {
+                    const item = $(`
+                        <li><a class="dropdown-item notification-item" href="${notification.actionUrl || '#'}" data-id="${notification.id}">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-${getNotificationIcon(notification.type)} text-${getNotificationColor(notification.type)}"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="fw-bold">${notification.title}</div>
+                                    <div class="small text-muted">${notification.message}</div>
+                                    <div class="small text-muted">${new Date(notification.createdAt).toLocaleString()}</div>
+                                </div>
+                            </div>
+                        </a></li>
+                    `);
+                    
+                    item.click(function(e) {
+                        if (notification.actionUrl) {
+                            markNotificationAsRead(notification.id);
+                        }
+                    });
+                    
+                    list.append(item);
+                });
+            } else {
+                noNotifications.show();
+            }
+        }
+        
+        function getNotificationIcon(type) {
+            switch (type) {
+                case 1: return 'check-circle'; // Success
+                case 2: return 'exclamation-triangle'; // Warning
+                case 3: return 'times-circle'; // Error
+                case 4: return 'file-alt'; // FormSubmitted
+                case 5: return 'undo'; // FormReturned
+                case 6: return 'check-double'; // FormApproved
+                case 7: return 'times'; // FormRejected
+                default: return 'info-circle'; // Info
+            }
+        }
+        
+        function getNotificationColor(type) {
+            switch (type) {
+                case 1: return 'success'; // Success
+                case 2: return 'warning'; // Warning
+                case 3: return 'danger'; // Error
+                case 4: return 'primary'; // FormSubmitted
+                case 5: return 'warning'; // FormReturned
+                case 6: return 'success'; // FormApproved
+                case 7: return 'danger'; // FormRejected
+                default: return 'info'; // Info
+            }
+        }
+        
+        function markNotificationAsRead(id) {
+            $.post(`/api/notifications/${id}/read`, function() {
+                loadNotifications();
+            });
+        }
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

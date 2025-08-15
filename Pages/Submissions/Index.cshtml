@@ -1,0 +1,33 @@
+@page
+@model YourApp.Pages.Submissions.IndexModel
+@{
+    ViewData["Title"] = "Submitted Forms";
+}
+<h2 class="mb-4 fw-bold">Submitted Forms</h2>
+<table class="table table-hover shadow-sm">
+    <thead class="table-light">
+        <tr>
+            <th>Form Name</th>
+            <th>Submitted By</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var sub in Model.FormSubmissions)
+    {
+        <tr>
+            <td>@sub.FormTemplate.Name</td>
+            <td>@sub.SubmittedBy</td>
+            <td>
+                <span class="badge @(sub.Status == FormStatus.Approved ? "bg-success" : sub.Status == FormStatus.Returned ? "bg-warning text-dark" : sub.Status == FormStatus.Rejected ? "bg-danger" : "bg-secondary")">
+                    @sub.Status
+                </span>
+            </td>
+            <td>
+                <a asp-page="Review" asp-route-id="@sub.Id" class="btn btn-sm btn-outline-primary">Review</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

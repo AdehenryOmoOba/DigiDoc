@@ -1,0 +1,34 @@
+@page "{id:int}"
+@model YourApp.Pages.Submissions.ReviewModel
+@{
+    ViewData["Title"] = "Review Submission";
+}
+<h2 class="mb-3 fw-bold">Review Submission</h2>
+@if (Model.Submission != null)
+{
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">@Model.Submission.FormTemplate.Name</h4>
+        </div>
+        <div class="card-body">
+            <p>Status: <span class="badge bg-info">@Model.Submission.Status</span></p>
+            <pre class="bg-light p-2 rounded">@Model.Submission.DataJson</pre>
+            <form method="post">
+                <input type="hidden" name="id" value="@Model.Submission.Id" />
+                <div class="mb-2">
+                    <label for="comment" class="form-label">Comment (optional):</label>
+                    <textarea name="Comment" class="form-control"></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" asp-page-handler="Return" class="btn btn-warning">Return</button>
+                    <button type="submit" asp-page-handler="Approve" class="btn btn-success">Approve</button>
+                    <button type="submit" asp-page-handler="Reject" class="btn btn-danger">Reject</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-danger">Submission not found.</div>
+}

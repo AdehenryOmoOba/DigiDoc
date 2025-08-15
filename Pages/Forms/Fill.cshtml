@@ -1,0 +1,23 @@
+@page "{id:int}"
+@model YourApp.Pages.Forms.FillModel
+@{
+    ViewData["Title"] = Model.FormTemplate?.Name ?? "Fill Form";
+}
+<h2 class="mb-3">@Model.FormTemplate?.Name</h2>
+<p class="text-muted">@Model.FormTemplate?.Description</p>
+<!-- Progress Bar -->
+<div class="progress mb-3" style="height: 30px;">
+    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width:@(Model.CurrentPage * 20)%">
+        Step @Model.CurrentPage
+    </div>
+</div>
+<form method="post" class="mb-3">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="CurrentPage" />
+    <input type="hidden" asp-for="DataJson" />
+    <div class="d-flex justify-content-between">
+        <button type="submit" asp-page-handler="Previous" class="btn btn-outline-secondary" disabled="@(Model.CurrentPage == 1)">Previous</button>
+        <button type="submit" asp-page-handler="Next" class="btn btn-primary">Next</button>
+        <button type="submit" asp-page-handler="Submit" class="btn btn-success">Submit</button>
+    </div>
+</form>

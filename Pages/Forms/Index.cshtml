@@ -1,0 +1,18 @@
+@page
+@model YourApp.Pages.Forms.IndexModel
+@{
+    ViewData["Title"] = "Available Forms";
+}
+<h2 class="mb-4">Available Forms</h2>
+<ul class="list-group">
+@foreach (var form in Model.FormTemplates)
+{
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+            <a asp-page="Fill" asp-route-id="@form.Id" class="fw-bold">@form.Name</a>
+            <span class="text-muted ms-2">@form.Description</span>
+        </div>
+        <span class="badge bg-primary rounded-pill">Fill</span>
+    </li>
+}
+</ul>
